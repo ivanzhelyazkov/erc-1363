@@ -1,0 +1,17 @@
+[profile.default]
+src = 'contracts'
+test = 'test'
+out = 'out'
+libs = ["node_modules", "lib"]
+gas_reports = ['Escrow']
+optimizer = true
+optimizer_runs = 200
+solc = "0.8.16"
+remappings = [
+    '@openzeppelin/=node_modules/@openzeppelin/',
+    'eth-gas-reporter/=node_modules/eth-gas-reporter/',
+    'hardhat-deploy/=node_modules/hardhat-deploy/',
+    'hardhat/=node_modules/hardhat/',
+]
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
