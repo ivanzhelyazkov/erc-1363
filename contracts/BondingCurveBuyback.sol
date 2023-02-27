@@ -47,26 +47,7 @@ contract BondingCurveBuyback is
         }
         // mint tokens to user
         _mint(msg.sender, tokenAmount);
-        emit TokensBought(msg.sender, tokenAmount);
-    }
-
-    function buyTokensAmount(uint tokenAmount) public payable nonReentrant {
-        // calculate eth needed
-        uint256 ethAmount = getExpectedEthToSend(tokenAmount);
-        // validate the amount is > 0
-        if (ethAmount == 0) {
-            revert InvalidETHAmount();
-        }
-        if(ethAmount < msg.value) {
-            revert NotEnoughETHToBuyTokens();
-        }
-        // mint tokens to user
-        _mint(msg.sender, tokenAmount);
-        // refund user for eth
-        (bool res, ) = msg.sender.call{value: msg.value - ethAmount}("");
-        if (!res) {
-            revert ETHNotSent();
-        }
+        // emit event
         emit TokensBought(msg.sender, tokenAmount);
     }
 
@@ -89,6 +70,7 @@ contract BondingCurveBuyback is
         if (!res) {
             revert ETHNotSent();
         }
+        // emit event
         emit TokensSold(msg.sender, etherAmount);
     }
 
@@ -103,16 +85,15 @@ contract BondingCurveBuyback is
         bytes calldata
     ) external override nonReentrant returns (bytes4) {
         // calculate how much ether to send to user
-        uint256 etherToPay = getExpectedEthReceived(amount);
+        uint256 etherAmount = getExpectedEthReceived(amount);
         // check if enough ether in contract
-        require(
-            address(this).balance >= etherToPay,
-            "Insufficient ETH in contract."
-        );
+        if (address(this).balance < etherAmount) {
+            revert InsufficientETHInContract();
+        }
         // burn tokens from contract
         _burn(address(this), amount);
         // send eth to user (address which is authorized to spend)
-        (bool res, ) = spender.call{value: etherToPay}("");
+        (bool res, ) = spender.call{value: etherAmount}("");
         require(res, "ETH not sent");
         return
             bytes4(
@@ -130,7 +111,7 @@ contract BondingCurveBuyback is
 
     /// @inheritdoc IBondingCurveBuyback
     function getTokenPrice() public view returns (uint) {
-        return (slope * totalSupply()) / 1e18 + startPrice;
+        return startPrice + (slope * totalSupply()) / 1e18;
     }
 
     /// @inheritdoc IBondingCurveBuyback
@@ -138,6 +119,7 @@ contract BondingCurveBuyback is
         if(tokenAmount == 0) {
             return getTokenPrice();
         }
+        // buyPrice = (m * S) + (m * n) + i
         return getTokenPrice() + (tokenAmount * slope) / 1e18;
     }
 
@@ -146,11 +128,12 @@ contract BondingCurveBuyback is
         if(tokenAmount == 0) {
             return getTokenPrice();
         }
-        uint price = getTokenPrice() - (tokenAmount * slope) / 1e18;
-        if (price < startPrice) {
-            return startPrice;
+        uint totalSupply = totalSupply();
+        if(tokenAmount > totalSupply) {
+            return (slope * tokenAmount) / 1e18;
         }
-        return price;
+        // sellPrice = (m * (S + n)) - (m * n) + i
+        return startPrice + (slope * (totalSupply + tokenAmount) - (slope * tokenAmount)) / 1e18;
     }
 
 

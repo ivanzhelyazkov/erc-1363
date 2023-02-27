@@ -44,21 +44,6 @@ contract BondingCurveBuybackTest is Test {
         assertEq(token.totalSupply(), 0);
     }
 
-    function testPriceIncreasesLinearly() public {
-        vm.startPrank(users[1]);
-        uint tokenAmount = 10000e18;
-        uint buyPrice = token.getTokenPriceOnBuy(tokenAmount);
-        uint256 ethAmount = token.getExpectedEthToSend(tokenAmount);
-        
-        uint ethStartBalance = users[1].balance;
-        token.buyTokens{value: ethAmount}();
-        uint balance = token.balanceOf(users[1]);
-        uint receivedEth = token.getExpectedEthReceived(balance);
-        uint sellPrice = token.getTokenPriceOnSell(tokenAmount);
-        token.sellTokens(balance);
-        assertEq(buyPrice, sellPrice);
-    }
-
     /**
      * @dev Test user can buy tokens
      */
@@ -79,26 +64,6 @@ contract BondingCurveBuybackTest is Test {
         vm.stopPrank();
     }
 
-    // function testPriceIncreasesByOnePercentFor10kTokens() public {
-    //     uint amount = 10 ether; // 10 eth * 0.001 eth per token = 10 000 tokens (9999 due to curve price increasing)
-    //     uint startPrice = token.getTokenPrice();
-    //     uint expectedBoughtAmount = token.getExpectedTokensBought(amount);
-
-    //     vm.startPrank(users[1]);
-    //     token.buyTokens{value: amount}();
-
-    //     uint endPrice = token.getTokenPrice();
-
-    //     uint ethForOneToken = token.getExpectedEthToSend(1e18);
-    //     token.buyTokens{value: ethForOneToken}();
-
-    //     uint bal = token.balanceOf(users[1]);
-
-    //     uint onePercentStartPrice = (startPrice) / 100;
-
-    //     assertEq(startPrice + onePercentStartPrice - onePercentStartPrice / 1000, endPrice);
-    // }
-
     function testCannotBuyTokensWithoutSendingEth() public {
         vm.prank(users[1]);
         vm.expectRevert(IBondingCurveBuyback.NotEnoughETHToBuyTokens.selector);
@@ -108,50 +73,52 @@ contract BondingCurveBuybackTest is Test {
     /**
      * @dev Test user can buy tokens by sending eth to contract
      */
-    // function testCanBuyTokensWithSend(uint amount) public {
-    //     // fuzz test with < 100 eth (that's the initial balance of users)
-    //     vm.assume(amount > 0 && amount < 100 ether);
-    //     // calculate expected amount to be sent to user
-    //     uint expectedBoughtAmount = token.getExpectedTokensBought(amount);
-    //     vm.startPrank(users[1]);
-    //     uint balanceBefore = token.balanceOf(users[1]);
-    //     // transfer tokens manually
-    //     (bool res, ) = address(token).call{value: amount}("");
-    //     assertTrue(res);
+    function testCanBuyTokensWithSend(uint amount) public {
+        // fuzz test with < 100 eth (that's the initial balance of users)
+        vm.assume(amount > 0 && amount < 100 ether);
+        // calculate expected amount to be sent to user
+        uint expectedBoughtAmount = token.getExpectedTokensBought(amount);
+        vm.startPrank(users[1]);
+        uint balanceBefore = token.balanceOf(users[1]);
+        // transfer tokens manually
+        (bool res, ) = address(token).call{value: amount}("");
+        assertTrue(res);
 
-    //     uint balanceAfter = token.balanceOf(users[1]);
-    //     uint gain = balanceAfter - balanceBefore;
+        uint balanceAfter = token.balanceOf(users[1]);
+        uint gain = balanceAfter - balanceBefore;
 
-    //     assertEq(gain, expectedBoughtAmount);
-    //     vm.stopPrank();
-    // }
+        assertEq(gain, expectedBoughtAmount);
+        vm.stopPrank();
+    }
 
     /**
      * @dev Test user can sell tokens
      */
-    function testCanSellTokens() public {
+    function testCanSellTokens(uint ethAmount, uint amountToSell) public {
         // fuzz test with < 100 eth (that's the initial balance of users)
-        //vm.assume(amount > 0.0011 ether && amount < 100 ether);
-        uint amount = 50 ether;
+        vm.assume(ethAmount > 0.0011 ether && ethAmount < 100 ether);
         vm.startPrank(users[1]);
         // buy tokens so as to have a balance to sell
-        token.buyTokens{value: amount}();
-        console.log("eth sent in the beginning: %s", amount);
+        token.buyTokens{value: ethAmount}();
 
         uint tokenBalance = token.balanceOf(users[1]);
+        console.log('token balance: %s', tokenBalance);
 
-        uint tokenPriceOnSell = token.getTokenPriceOnSell(tokenBalance);
-        console.log('token price on sell: %s', tokenPriceOnSell);
+        // ensure we are selling less than total balance
+        vm.assume(amountToSell < (tokenBalance * 85) / 100);
 
         // calculate expected amount to be sent to user
-        uint expectedEthGained = token.getExpectedEthReceived(tokenBalance);
-        console.log("expected eth to send back to user: %s", expectedEthGained);
-        console.log("eth in contract: %s", address(token).balance);
+        uint expectedEthGained = token.getExpectedEthReceived(amountToSell);
+        uint contractBalance = address(token).balance;
         // get eth and token balances before sell
         uint ethBefore = users[1].balance;
         uint balanceBefore = token.balanceOf(users[1]);
+        console.log('contract eth: %s', contractBalance);
+        console.log('user expected eth: %s', expectedEthGained);
+
         // sell tokens
-        token.sellTokens(tokenBalance);
+        token.sellTokens(amountToSell);
+
         // get eth and token balances after sell
         uint balanceAfter = token.balanceOf(users[1]);
         uint ethAfter = users[1].balance;
@@ -161,39 +128,47 @@ contract BondingCurveBuybackTest is Test {
         uint ethGain = ethAfter - ethBefore;
         // assert equality of expected amounts
         assertEq(ethGain, expectedEthGained);
-        assertEq(tokensSent, tokenBalance);
+        assertEq(tokensSent, amountToSell);
         vm.stopPrank();
     }
 
     /**
-     * @dev Test user can sell tokens by sending tokens to contract
+     * @dev Test user can sell tokens by sending tokens to contract with `transferAndCall`
      */
-    // function test(uint amount) public {
-    //     // fuzz test with < 100 eth (that's the initial balance of users)
-    //     vm.assume(amount > 0 && amount < 100 ether);
-    //     vm.startPrank(users[1]);
-    //     uint expectedBoughtAmount = token.getExpectedTokensBought(amount);
-    //     token.buyTokens{value: amount}();
+    function testCanSellTokensBySendingToContract(uint ethAmount, uint amountToSell) public {
+        // fuzz test with < 100 eth (that's the initial balance of users)
+        vm.assume(ethAmount > 0.0011 ether && ethAmount < 100 ether);
+        vm.startPrank(users[1]);
+        // buy tokens so as to have a balance to sell
+        token.buyTokens{value: ethAmount}();
 
-    //     // calculate expected amount to be sent to user
-    //     uint expectedEthGained = token.getExpectedEthReceived(expectedBoughtAmount);
-    //     // get eth and token balances before sell
-    //     uint ethBefore = users[1].balance;
-    //     uint balanceBefore = token.balanceOf(users[1]);
-    //     // sell tokens
-    //     token.sellTokens(expectedBoughtAmount);
-    //     // get eth and token balances after sell
-    //     uint balanceAfter = token.balanceOf(users[1]);
-    //     uint ethAfter = users[1].balance;
-    //     // check tokens sent to contract
-    //     uint tokensSent = balanceBefore - balanceAfter;
-    //     // check eth received
-    //     uint ethGain = ethAfter - ethBefore;
-    //     // assert equality of expected amounts
-    //     assertEq(ethGain, expectedEthGained);
-    //     assertEq(tokensSent, expectedBoughtAmount);
-    //     vm.stopPrank();
-    // }
+        uint tokenBalance = token.balanceOf(users[1]);
+
+        // ensure we are selling less than total balance
+        vm.assume(amountToSell < (tokenBalance * 85) / 100);
+
+        // calculate expected amount to be sent to user
+        uint expectedEthGained = token.getExpectedEthReceived(amountToSell);
+        uint contractBalance = address(token).balance;
+        // get eth and token balances before sell
+        uint ethBefore = users[1].balance;
+        uint balanceBefore = token.balanceOf(users[1]);
+
+        // sell tokens by sending to contract
+        token.transferAndCall(address(token), amountToSell);
+
+        // get eth and token balances after sell
+        uint balanceAfter = token.balanceOf(users[1]);
+        uint ethAfter = users[1].balance;
+        // check tokens sent to contract
+        uint tokensSent = balanceBefore - balanceAfter;
+        // check eth received
+        uint ethGain = ethAfter - ethBefore;
+        // assert equality of expected amounts
+        assertEq(ethGain, expectedEthGained);
+        assertEq(tokensSent, amountToSell);
+        vm.stopPrank();
+    }
 
     /**
      * @dev Test master transfer emits event

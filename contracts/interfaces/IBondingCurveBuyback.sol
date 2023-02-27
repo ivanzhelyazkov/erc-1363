@@ -11,12 +11,19 @@ interface IBondingCurveBuyback {
     /**
      * @dev Get token price on buy
      * @dev token price is returned with 18 decimals
+     * @dev Token price is calculated using a linear bonding curve formula:
+     * @dev Quadratic curve formula: x * (x+1) / 2
+     * @dev buyPrice = (m * S) + (m * n) + i
+     * @dev where m - slope, i - initial price, S - total supply, n - tokenAmount 
      */
     function getTokenPriceOnBuy(uint tokenAmount) external view returns (uint);
 
     /**
      * @dev Get token price on sell
      * @dev token price is returned with 18 decimals
+     * @dev Token price is calculated using a linear bonding curve formula:
+     * @dev sellPrice = (m * (S - n)) + (m * n) + i
+     * @dev where m - slope, i - initial price, S - total supply, n - tokenAmount 
      */
     function getTokenPriceOnSell(uint tokenAmount) external view returns (uint);
 
