@@ -16,9 +16,17 @@ contract BondingCurveBuybackTest is Test {
 
     // Events
     // Emitted on successful buying of tokens
-    event TokensBought(address indexed user, uint indexed tokenAmount, uint indexed ethAmount);
+    event TokensBought(
+        address indexed user,
+        uint indexed tokenAmount,
+        uint indexed ethAmount
+    );
     // Emitted on successful sell of tokens
-    event TokensSold(address indexed user, uint indexed tokenAmount, uint indexed ethAmount);
+    event TokensSold(
+        address indexed user,
+        uint indexed tokenAmount,
+        uint indexed ethAmount
+    );
 
     /// @dev function to set up state before tests
     function setUp() public virtual {
@@ -181,7 +189,9 @@ contract BondingCurveBuybackTest is Test {
         token.buyTokens{value: ethAmount}();
 
         uint tokenSellAmount = 1 ether;
-        uint expectedEthReceived = token.getExpectedEthReceived(tokenSellAmount);
+        uint expectedEthReceived = token.getExpectedEthReceived(
+            tokenSellAmount
+        );
         // check all topics match the next emitted event
         vm.expectEmit(true, true, true, true);
         emit TokensSold(users[1], tokenSellAmount, expectedEthReceived);
@@ -252,7 +262,7 @@ contract BondingCurveBuybackTest is Test {
     function testShouldLimitSellPriceToTotalSupply() public {
         vm.prank(users[1]);
         // buy some tokens
-        token.buyTokens{ value: 1 ether }();
+        token.buyTokens{value: 1 ether}();
         uint totalSupply = token.totalSupply();
         // get price for more than total supply
         uint amount = totalSupply * 2;

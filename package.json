@@ -1,5 +1,5 @@
 {
-  "name": "rareskills-week-1",
+  "name": "erc-1363-tokens",
   "version": "1.0.0",
   "description": "Variations of ERC-1363 tokens",
   "main": "index.js",
@@ -8,20 +8,19 @@
     "coverage": "forge coverage",
     "gas-report": "forge test --gas-report",
     "slither": "slither .",
-    "deploy": "npx hardhat deploy",
     "prettier": "prettier --write 'contracts/**/*.sol' 'test/*.sol'"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Upside-GG/Solidity-Ivan-Zhelyazkov.git"
+    "url": "git+https://github.com/ivanzhelyazkov/erc-1363.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Upside-GG/Solidity-Ivan-Zhelyazkov/issues"
+    "url": "https://github.com/ivanzhelyazkov/erc-1363/issues"
   },
-  "homepage": "https://github.com/Upside-GG/Solidity-Ivan-Zhelyazkov#readme",
+  "homepage": "https://github.com/ivanzhelyazkov/erc-1363#readme",
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.2",
     "@openzeppelin/contracts": "^4.8.1",

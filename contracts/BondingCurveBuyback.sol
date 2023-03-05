@@ -114,7 +114,7 @@ contract BondingCurveBuyback is
 
     /// @inheritdoc IBondingCurveBuyback
     function getTokenPriceOnBuy(uint tokenAmount) public view returns (uint) {
-        if(tokenAmount == 0) {
+        if (tokenAmount == 0) {
             return getTokenPrice();
         }
         // buyPrice = (m * S) + (m * n) + i
@@ -123,17 +123,19 @@ contract BondingCurveBuyback is
 
     /// @inheritdoc IBondingCurveBuyback
     function getTokenPriceOnSell(uint tokenAmount) public view returns (uint) {
-        if(tokenAmount == 0) {
+        if (tokenAmount == 0) {
             return getTokenPrice();
         }
         uint totalSupply = totalSupply();
-        if(tokenAmount > totalSupply) {
+        if (tokenAmount > totalSupply) {
             tokenAmount = totalSupply;
         }
         // sellPrice = (m * (S + n)) - (m * n) + i
-        return startPrice + (slope * (totalSupply + tokenAmount) - (slope * tokenAmount)) / 1e18;
+        return
+            startPrice +
+            (slope * (totalSupply + tokenAmount) - (slope * tokenAmount)) /
+            1e18;
     }
-
 
     /// @inheritdoc IBondingCurveBuyback
     function getEthPriceOnBuy(uint ethAmount) public view returns (uint) {

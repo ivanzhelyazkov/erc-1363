@@ -1,4 +1,4 @@
-ERC-1363 token collection
+# ERC-1363 token collection
 
 This repo contains 3 different ERC-1363 tokens:
 
@@ -6,20 +6,21 @@ This repo contains 3 different ERC-1363 tokens:
 
 * Godmode token - token which allows an admin to transfer tokens between addresses at will
 
-* Bonding curve token - token which implements buy and sell using a bonding curve. The token starts at 0 total supply, and it's supply and price increases as people buy it
+* Bonding curve token - token which implements buy and sell using a bonding curve. The token starts at 0 total supply, and it's supply and price increases as people buy it. The curve used here is linear. Tokens are bought with ETH.  
 
 All of the tokens implement ERC-1363 and all of it's functions:
-* transferAndCall, transferFromAndCall, approveAndCall
+* `transferAndCall`, `transferFromAndCall`, `approveAndCall`
 
+# Instructions for project
 
-Bonding Curve Token
+All commands are in package.json.  
+Make sure to run `npm i` first.  
 
-This smart contract is a Bonding Curve Token, which is a token (BCT) that follows a specific mathematical formula for determining its price.
-
-The contract's primary purpose is to implement a bonding curve mechanism, a mathematical formula that determines the price of the token in question.
-
-It implements the ERC20 standard for tokens and the Ownable standard from the OpenZeppelin library, which allows the contract to have an owner with specific privileges. The contract has several functions, including buy, sell, withdraw, and getCurrentPrice.
-
-The buy function allows users to purchase tokens with Ether and the sell function allows them to sell tokens at a 10% loss.
-
-The withdraw function allows the owner to withdraw any lost Ether and the getCurrentPrice function returns the current price of the token based on the bonding curve formula.
+To run tests:  
+`npm run test`  
+To get code coverage:  
+`npm run coverage`  
+To get gas reports:  
+`npm run gas-report`  
+To get slither static analysis report:  
+`npm run slither`  

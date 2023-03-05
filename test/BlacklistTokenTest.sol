@@ -270,7 +270,7 @@ contract BlacklistTokenTest is Test {
         vm.prank(users[1]);
         uint amount = 1000 ether;
         token.approve(users[2], amount);
-        
+
         vm.prank(users[2]);
         token.transferFrom(users[1], users[2], amount);
     }
