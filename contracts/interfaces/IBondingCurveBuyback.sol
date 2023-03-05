@@ -73,7 +73,7 @@ interface IBondingCurveBuyback {
 
     // Events
     // Emitted on successful buying of tokens
-    event TokensBought(address indexed user, uint indexed amount);
+    event TokensBought(address indexed user, uint indexed tokenAmount, uint indexed ethAmount);
     // Emitted on successful sell of tokens
-    event TokensSold(address indexed user, uint indexed amount);
+    event TokensSold(address indexed user, uint indexed tokenAmount, uint indexed ethAmount);
 }

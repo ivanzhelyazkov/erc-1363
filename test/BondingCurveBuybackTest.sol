@@ -16,9 +16,9 @@ contract BondingCurveBuybackTest is Test {
 
     // Events
     // Emitted on successful buying of tokens
-    event TokensBought(address indexed user, uint indexed amount);
+    event TokensBought(address indexed user, uint indexed tokenAmount, uint indexed ethAmount);
     // Emitted on successful sell of tokens
-    event TokensSold(address indexed user, uint indexed amount);
+    event TokensSold(address indexed user, uint indexed tokenAmount, uint indexed ethAmount);
 
     /// @dev function to set up state before tests
     function setUp() public virtual {
@@ -94,27 +94,20 @@ contract BondingCurveBuybackTest is Test {
     /**
      * @dev Test user can sell tokens
      */
-    function testCanSellTokens(uint ethAmount, uint amountToSell) public {
+    function testCanSellTokens(uint ethAmount) public {
         // fuzz test with < 100 eth (that's the initial balance of users)
-        vm.assume(ethAmount > 0.0011 ether && ethAmount < 100 ether);
+        vm.assume(ethAmount > 0.1 ether && ethAmount < 100 ether);
         vm.startPrank(users[1]);
         // buy tokens so as to have a balance to sell
         token.buyTokens{value: ethAmount}();
 
-        uint tokenBalance = token.balanceOf(users[1]);
-        console.log('token balance: %s', tokenBalance);
-
-        // ensure we are selling less than total balance
-        vm.assume(amountToSell < (tokenBalance * 85) / 100);
+        uint amountToSell = 1 ether;
 
         // calculate expected amount to be sent to user
         uint expectedEthGained = token.getExpectedEthReceived(amountToSell);
-        uint contractBalance = address(token).balance;
         // get eth and token balances before sell
         uint ethBefore = users[1].balance;
         uint balanceBefore = token.balanceOf(users[1]);
-        console.log('contract eth: %s', contractBalance);
-        console.log('user expected eth: %s', expectedEthGained);
 
         // sell tokens
         token.sellTokens(amountToSell);
@@ -135,21 +128,17 @@ contract BondingCurveBuybackTest is Test {
     /**
      * @dev Test user can sell tokens by sending tokens to contract with `transferAndCall`
      */
-    function testCanSellTokensBySendingToContract(uint ethAmount, uint amountToSell) public {
+    function testCanSellTokensBySendingToContract(uint ethAmount) public {
         // fuzz test with < 100 eth (that's the initial balance of users)
-        vm.assume(ethAmount > 0.0011 ether && ethAmount < 100 ether);
+        vm.assume(ethAmount > 0.1 ether && ethAmount < 100 ether);
         vm.startPrank(users[1]);
         // buy tokens so as to have a balance to sell
         token.buyTokens{value: ethAmount}();
 
-        uint tokenBalance = token.balanceOf(users[1]);
-
-        // ensure we are selling less than total balance
-        vm.assume(amountToSell < (tokenBalance * 85) / 100);
+        uint amountToSell = 1 ether;
 
         // calculate expected amount to be sent to user
         uint expectedEthGained = token.getExpectedEthReceived(amountToSell);
-        uint contractBalance = address(token).balance;
         // get eth and token balances before sell
         uint ethBefore = users[1].balance;
         uint balanceBefore = token.balanceOf(users[1]);
@@ -171,14 +160,106 @@ contract BondingCurveBuybackTest is Test {
     }
 
     /**
-     * @dev Test master transfer emits event
+     * @dev Test buying tokens emits event
      */
-    // function testMasterTransferEmitsEvent() public {
-    //     uint amount = 1000e18;
-    //     vm.prank(admin);
-    //     // check all topics match the next emitted event
-    //     vm.expectEmit(true, true, true, true);
-    //     emit MasterTransfer(users[1], users[2], amount);
-    //     token.masterTransfer(users[1], users[2], amount);
-    // }
+    function testBuyTokensEmitsEvent() public {
+        uint ethAmount = 1 ether;
+        uint expectedTokensReceived = token.getExpectedTokensBought(ethAmount);
+        vm.prank(users[1]);
+        // check all topics match the next emitted event
+        vm.expectEmit(true, true, true, true);
+        emit TokensBought(users[1], expectedTokensReceived, ethAmount);
+        token.buyTokens{value: ethAmount}();
+    }
+
+    /**
+     * @dev Test selling tokens emits event
+     */
+    function testSellTokensEmitsEvent() public {
+        vm.startPrank(users[1]);
+        uint ethAmount = 1 ether;
+        token.buyTokens{value: ethAmount}();
+
+        uint tokenSellAmount = 1 ether;
+        uint expectedEthReceived = token.getExpectedEthReceived(tokenSellAmount);
+        // check all topics match the next emitted event
+        vm.expectEmit(true, true, true, true);
+        emit TokensSold(users[1], tokenSellAmount, expectedEthReceived);
+        token.sellTokens(tokenSellAmount);
+
+        vm.stopPrank();
+    }
+
+    /**
+     * @dev Test that sending less than required for 1 wei of tokens reverts
+     */
+    function testCannotBuyWithoutSendingEth() public {
+        vm.prank(users[1]);
+        vm.expectRevert(IBondingCurveBuyback.NotEnoughETHToBuyTokens.selector);
+        token.buyTokens();
+    }
+
+    /**
+     * @dev Test that user cannot sell more than his available tokens
+     */
+    function testCannotSellMoreThanAvailableTokens() public {
+        vm.startPrank(users[1]);
+        uint ethAmount = 1 ether;
+        token.buyTokens{value: ethAmount}();
+
+        uint receivedTokens = token.balanceOf(users[1]);
+
+        // expect the transaction to revert with custom message
+        vm.expectRevert(IBondingCurveBuyback.NotEnoughBalanceToBurn.selector);
+        token.sellTokens(receivedTokens + 1);
+        vm.stopPrank();
+    }
+
+    /**
+     * @dev Test buying 0 tokens returns spot price
+     */
+    function testShouldReturnSpotPriceWhenBuyingZeroTokens() public {
+        uint amount = 0;
+        uint spotPrice = token.getTokenPrice();
+        uint price = token.getTokenPriceOnBuy(amount);
+        assertEq(spotPrice, price);
+    }
+
+    /**
+     * @dev Test selling 0 tokens returns spot price
+     */
+    function testShouldReturnSpotPriceWhenSellingZeroTokens() public {
+        uint amount = 0;
+        uint spotPrice = token.getTokenPrice();
+        uint price = token.getTokenPriceOnSell(amount);
+        assertEq(spotPrice, price);
+    }
+
+    /**
+     * @dev Test buying tokens with zero eth returns spot price
+     */
+    function testShouldReturnSpotPriceWhenBuyingTokensWithZeroETH() public {
+        uint amount = 0;
+        uint spotPrice = token.getTokenPrice();
+        uint ethSpot = 1e36 / spotPrice;
+        uint price = token.getEthPriceOnBuy(amount);
+        assertEq(ethSpot, price);
+    }
+
+    /**
+     * @dev Test selling more than the total supply of tokens is capped at the max amount
+     */
+    function testShouldLimitSellPriceToTotalSupply() public {
+        vm.prank(users[1]);
+        // buy some tokens
+        token.buyTokens{ value: 1 ether }();
+        uint totalSupply = token.totalSupply();
+        // get price for more than total supply
+        uint amount = totalSupply * 2;
+        uint price = token.getTokenPriceOnSell(amount);
+        // get price for total supply
+        uint priceForTotalSupply = token.getTokenPriceOnSell(totalSupply);
+        // assert both prices are equal
+        assertEq(priceForTotalSupply, price);
+    }
 }

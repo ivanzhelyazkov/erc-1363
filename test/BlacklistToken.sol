@@ -252,4 +252,26 @@ contract BlacklistTokenTest is Test {
         token.transferFromAndCall(users[2], users[1], amount, "0x0");
         vm.stopPrank();
     }
+
+    /**
+     * @dev Test non-blacklisted address can transfer tokens
+     * @dev Also tests that can transfer to non-blacklisted address (users[2])
+     */
+    function testNonBlacklistedAddressCanTransfer() public {
+        vm.prank(users[1]);
+        uint transferAmount = 1000e18;
+        token.transfer(users[2], transferAmount);
+    }
+
+    /**
+     * @dev Test non-blacklisted address can transfer from tokens
+     */
+    function testNonBlacklistedAddressCanTransferFrom() public {
+        vm.prank(users[1]);
+        uint amount = 1000 ether;
+        token.approve(users[2], amount);
+        
+        vm.prank(users[2]);
+        token.transferFrom(users[1], users[2], amount);
+    }
 }

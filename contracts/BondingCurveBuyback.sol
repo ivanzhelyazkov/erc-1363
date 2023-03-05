@@ -9,8 +9,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./interfaces/IBondingCurveBuyback.sol";
 
-import "hardhat/console.sol";
-
 /**
  * Token sale and buyback smart contract using a bonding curve
  * The contract is an ERC-1363 token, starting with supply = 0
@@ -48,7 +46,7 @@ contract BondingCurveBuyback is
         // mint tokens to user
         _mint(msg.sender, tokenAmount);
         // emit event
-        emit TokensBought(msg.sender, tokenAmount);
+        emit TokensBought(msg.sender, tokenAmount, msg.value);
     }
 
     /// @inheritdoc IBondingCurveBuyback
@@ -71,7 +69,7 @@ contract BondingCurveBuyback is
             revert ETHNotSent();
         }
         // emit event
-        emit TokensSold(msg.sender, etherAmount);
+        emit TokensSold(msg.sender, amount, etherAmount);
     }
 
     /**
@@ -130,7 +128,7 @@ contract BondingCurveBuyback is
         }
         uint totalSupply = totalSupply();
         if(tokenAmount > totalSupply) {
-            return (slope * tokenAmount) / 1e18;
+            tokenAmount = totalSupply;
         }
         // sellPrice = (m * (S + n)) - (m * n) + i
         return startPrice + (slope * (totalSupply + tokenAmount) - (slope * tokenAmount)) / 1e18;
@@ -154,12 +152,6 @@ contract BondingCurveBuyback is
         }
         // get 1 eth = x tokens when buying
         return ((ethAmount * 1e18) / effectiveTokenPrice) / 1e18;
-    }
-
-    function getExpectedEthToSend(
-        uint tokenAmount
-    ) public view returns (uint ethAmount) {
-        return (tokenAmount * getTokenPriceOnBuy(tokenAmount)) / 1e18;
     }
 
     /// @inheritdoc IBondingCurveBuyback
